@@ -30,7 +30,7 @@
 					throw \`🚫 RIPGEN: \${e}\`
 				}
 			}`;
-        const worker = new Worker(URL.createObjectURL(new Blob([workerCode])));
+        const worker = new Worker(URL.createObjectURL(new Blob([workerCode])), { type: "module" });
         worker.postMessage(url);
         worker.onmessageerror = (e) => {
           console.error(`🚫 RIPGEN: Worker: ${e.message}`);
@@ -102,7 +102,7 @@ self.onmessage = async (e) => {
 		self.close();
 	}
 }`]),
-        ));
+        ), { type: "module" });
         console.log(this.workers);
         this.workers.add(worker);
         worker.onmessage = (e) => {
