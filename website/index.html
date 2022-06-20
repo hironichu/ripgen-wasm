@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>RipGen - Wasm</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta property="og:title" content="RipGen Wasm" />
+	<meta name="description" content="A rust-(wasm)based version of the popular Dnsgen tool">
+	<meta property="og:type" content="code" />
+	<meta property="og:image" content="https://raw.githubusercontent.com/hironichu/ripgen-deno/main/assets/RipgenGithub.png" />
+	<meta name="twitter:title" content="Ripgen Wasm">
+	<meta name="twitter:description" content=" Sass compiler with Rust+WASM, right in your browser.">
+	<meta name="twitter:image" content=" https://raw.githubusercontent.com/hironichu/ripgen-deno/main/assets/RipgenGithub.png">
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="author" content="Hironichu, D0nutptr">
+	<style>
+		body {
+
+			color: white;
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			background: rgb(15, 15, 20);
+			font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+
+		}
+
+		.main {
+			opacity: 0;
+			transition: opacity .3s ease-in-out;
+		}
+
+		a {
+			font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+			color: gray;
+			text-decoration: none;
+		}
+
+		.runner {
+			display: none;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="main">
+		<img class="logo" src="./RipgenLogo.svg" alt="RipGenLogo">
+		<p class="desc">A rust-(wasm)based version of the popular <a href="https://github.com/ProjectAnte/dnsgen"
+				target="_blank">dnsgen</a> python utility.<br>This tool has been made by <a href="https://github.com/d0nutptr" target="_blank">@d0nutptr</a> and ported to Wasm by <a href="https://github.com/hironichu" target="_blank">@hironichu</a><br>This runs entirely in your browser, no data is sent.</p>
+		<div class="menu">
+			<span>use it online</span>
+		</div>
+		<div class="start">
+			<div class="list-loader" id="wordlist-loader" data-state="none">
+				<p>Start by selecting a wordlist, there is one by default if you dont load one.</p>
+				<input type="text" id="wordlist" class="wordlist" placeholder="Use a URL to load a wordlist">
+				<div class="checkbox">
+					<label for="zstd">Decompress (ZSTD)</label>
+					<input type="checkbox" id="zstd" name="zstd" id="zstd">
+				</div>
+				<div class="btn-list">
+					<button id="loadlist" class="btn">Load a list</button>
+					<button id="usedefault" class="btn">Use default (big)</button>
+				</div>
+			</div>
+			<div class="runner" id="runner" data-state="hidden">
+				<div class="input-runner">
+					<div class="running-input">
+						<input type="text" id="domain" class="domain" placeholder="Domain to run">
+					</div>
+					<button id="download" class="btn download">Download</button>
+					<span id="resulttext" class="result-text">Numbers of results : </span>
+				</div>
+				<div class="result-container" id="result-container" contenteditable="true">
+					<div class="result" id="result">
+						<span>No result yet</span>
+					</div>
+				</div>
+			</div>
+		</div>
+
+	</div>
+	<script type="module" async>
+		import { str } from 'https://deno.land/x/denosass@1.0.4/src/api.js'
+		import './web.js';
+		(async () => {
+			let sheet = false
+			if (typeof CSSStyleSheet !== 'undefined') {
+				try {
+					sheet = new CSSStyleSheet();
+					document.adoptedStyleSheets = [sheet];
+				} catch {
+					sheet = false
+				}
+			} else {
+				sheet = false;
+			}
+			const scss = await str(\`${sassFile}\`, { load_paths: [], style: "expanded", quiet: true })
+if (sheet) {
+	sheet.replaceSync(scss);
+} else {
+	const style = document.createElement("style");
+	style.type = "text/css";
+	style.innerHTML = scss;
+	document.head.appendChild(style);
+}
+			const loadBtn = document.getElementById("loadlist");
+			const input = document.getElementById("wordlist")
+			const listLoader = document.getElementById("wordlist-loader");
+			const runnerdiv = document.getElementById("runner");
+			const zstd = document.getElementById("zstd")
+			const useDefaultbtn = document.getElementById("usedefault");
+			const domaininput = document.getElementById("domain");
+			const resultcontainer = document.getElementById("result-container");
+			const downloadbtn = document.getElementById("download");
+			const resulttext = document.getElementById("resulttext");
+			const runBtn = document.getElementById("run");
+			loadBtn.addEventListener("click", async () => {
+				listLoader.setAttribute("data-state", "loading");
+				const url = input.value;
+				const zstdstate = zstd.checked;
+				if (url.length == 0) {
+					alert("Please enter a URL");
+					return;
+				}
+				if (!url.match(/^(http|https):\/\//)) {
+					alert("Please enter a valid URL");
+					return;
+				}
+				try {
+					await window.ripgen.wordlist(url, zstdstate).then(obj => {
+						console.log("OK")
+						window.RipgenObject = obj;
+					})
+					listLoader.setAttribute("data-state", "loaded");
+					//hide the loader
+					setTimeout(() => {
+						listLoader.setAttribute("data-state", "hidden");
+						runnerdiv.setAttribute("data-state", "none");
+					}, 800);
+				} catch (e) {
+					console.error(e)
+					listLoader.setAttribute("data-state", "error");
+					await setTimeout(() => {
+						listLoader.setAttribute("data-state", "none");
+						input.value = "";
+						zstd.checked = false;
+					}, 2000);
+				}
+
+			}, false);
+			downloadbtn.addEventListener("click", (e) => {
+				if (window.RipgenObject) {
+					window.RipgenObject.download();
+					resultcontainer.innerHTML = resultType("No result yet");
+				}
+				e.preventDefault();
+			}, false);
+			useDefaultbtn.addEventListener("click", () => {
+				input.value = "https://raw.githubusercontent.com/hironichu/DenoRipgen/main/wordlist/wordlist.zst";
+				zstd.checked = true;
+				loadBtn.click();
+			}, false);
+			window.currentDomain = ""
+			window.RunningWorker = null;
+			const resultType = (name) => `<div class="result" id="result"><span>${name}</span></div>`
+			domaininput.addEventListener("input", (e) => {
+				if (!window.RipgenObject) return false;
+				if (domaininput.value.length > 5 && domaininput.value.length < 30 && (domaininput.value.match(/^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/))) {
+					resulttext.innerText = "Loading...";
+					resulttext.setAttribute("data-state", "true");
+					if (window.currentDomain == domaininput.value) {
+						window.RipgenObject.stop();
+						window.RunningWorker = null;
+						resulttext.innerText = "Loading...";
+						resulttext.setAttribute("data-state", "none");
+					}
+					if (window.RunningWorker) {
+						window.RipgenObject.stop();
+						resultcontainer.innerHTML = resultType("No result yet");
+						downloadbtn.setAttribute("data-state", "none");
+					}
+					window.currentDomain = domaininput.value;
+
+					window.RunningWorker = window.RipgenObject.exec(window.currentDomain, 4)
+
+					window.RipgenObject.run();
+
+				} else {
+					e.preventDefault();
+					return false;
+				}
+			}, false);
+			await new Promise((r) => setInterval(() => {
+				if (window.RipgenObject) {
+					r();
+				}
+			}, 100));
+			window.RipgenObject.addEventListener("data", (e) => {
+				if (RipgenObject.amount > 2000) {
+					resulttext.innerText = `Processing results, 
+					Current status : ${RipgenObject.amount} ( ${RipgenObject.processed} rendered)`;
+				} 
+					if (typeof e.detail === 'string') {
+						resultcontainer.insertAdjacentHTML("beforeend", resultType(e.detail));
+					} else {
+						[...e.detail].forEach(data => {
+							resultcontainer.insertAdjacentHTML("beforeend", resultType(data));
+						});
+					}
+			})
+			window.RipgenObject.addEventListener("done", (e) => {
+				downloadbtn.setAttribute("data-state", "true");
+				resulttext.setAttribute("data-state", "true");
+				downloadbtn.innerHTML = `Download`;
+				resulttext.innerText = `You can download the result now by clicking the download button,
+				Total : ${e.detail} results.`;
+			})
+		})()
+
+	</script>
+</body>
+
+</html>

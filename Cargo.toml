@@ -11,5 +11,6 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ripgen_lib = {version = "0.1.1", features = ["dnsgen"]}
-wasm-bindgen = "0.2.74"
+ripgen_lib = {version = "0.1.4", features = ["dnsgen"]}
+wasm-bindgen = "0.2.81"
+js-sys = "0.3.58"

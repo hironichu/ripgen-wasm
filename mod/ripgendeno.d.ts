@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
 * @param {string} subdomain
-* @param {string} worldlist
+* @param {Array<any>} worldlist
 * @returns {any}
 */
-export function ripgen(subdomain: string, worldlist: string): any;
+export function ripgen(subdomain: string, worldlist: Array<any>): any;
