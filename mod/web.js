@@ -87,7 +87,7 @@
 self.onmessage = async (e) => {
 	console.log(\`📝 RIPGEN: Worker ${i}: Start (\${e.data.length} words)\`);
 	const { ripgen } = await import('${
-            new URL("./ripgendeno.js", import.meta.url).href
+            new URL("./wasm/ripgendeno.js", import.meta.url).href
           }');
 	try {
 		const domain = "${domain}"
