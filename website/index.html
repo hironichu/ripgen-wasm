@@ -100,10 +100,11 @@
 			} else {
 				sheet = false;
 			}
-			const scss = await str(\`${sassFile}\`, { load_paths: [], style: "expanded", quiet: true })
+			const scss = await str(await (await fetch("https://raw.githubusercontent.com/hironichu/ripgen-deno/main/website/style.scss")).text(), { load_paths: [], style: "expanded", quiet: true })
 if (sheet) {
 	sheet.replaceSync(scss);
 } else {
+
 	const style = document.createElement("style");
 	style.type = "text/css";
 	style.innerHTML = scss;
