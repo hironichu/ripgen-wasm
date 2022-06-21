@@ -16,7 +16,7 @@
       if (zst) {
         const workerCode = `
 			self.onmessage = async (e) => {
-				console.log("📝 RIPGEN: Worker: Start");
+				console.debug("📝 RIPGEN: Worker: Start");
 				const { decompress } = await (await import("https://deno.land/x/zstd_web@0.2/zstd.js"));
 				try {
 					const url = e.data;
@@ -30,23 +30,29 @@
 					throw \`🚫 RIPGEN: \${e}\`
 				}
 			}`;
-        const worker = new Worker(URL.createObjectURL(new Blob([workerCode], {type: "application/javascript"})), { type: "module" });
+        const WorkerURL = URL.createObjectURL(
+          new Blob([workerCode], { type: "application/javascript" }),
+        );
+        const worker = new Worker(WorkerURL, { type: "module" });
         worker.postMessage(url);
         worker.onmessageerror = (e) => {
           console.error(`🚫 RIPGEN: Worker: ${e.message}`);
           worker.terminate();
+          URL.revokeObjectURL(WorkerURL);
           this.ready = false;
         };
         worker.onmessage = (e) => {
           if (e.data instanceof Uint8Array) {
             result = new TextDecoder().decode(e.data).split("\n");
             worker.terminate();
+            URL.revokeObjectURL(WorkerURL);
             this.ready = true;
           }
         };
         worker.onerror = (e) => {
           console.error(e.message);
           worker.terminate();
+          URL.revokeObjectURL(WorkerURL);
           this.ready = false;
         };
       } else {
@@ -64,10 +70,6 @@
       return new ripgen(result);
     }
     static ready = false;
-    static ondata = new CustomEvent("data", {
-      bubbles: true,
-      cancelable: true,
-    });
     amount = 0;
     resultdata = [];
     processed = 0;
@@ -82,35 +84,36 @@
         throw `🚫 RIPGEN: Wordlist not loaded`;
       }
       for (let i = 0; i < threads; i++) {
-        const worker = new Worker(URL.createObjectURL(
-          new Blob([`
-self.onmessage = async (e) => {
-	console.log(\`📝 RIPGEN: Worker ${i}: Start (\${e.data.length} words)\`);
-	const { ripgen } = await import('${
-            new URL("./wasm/ripgendeno.js", import.meta.url).href
-          }');
-	try {
-		const domain = "${domain}"
-		const result = ripgen(domain, e.data);
-		console.debug(\`📝 RIPGEN: Worker ${i}: \${result.length} results\`);
-		self.postMessage(result);
-		console.debug(\`📝 RIPGEN: Worker ${i}: Done\`);
-		self.postMessage("finished");
-		self.close("finished");
-	} catch (e) {
-		console.error(e);
-		self.close();
-	}
-}`], {type: "application/javascript"}),
-        ), { type: "module" });
-        console.log(this.workers);
+        const WorkerBlob = URL.createObjectURL(
+          new Blob(
+            [`
+  self.onmessage = async (e) => {
+	  console.debug(\`📝 RIPGEN: Worker ${i}: Start (\${e.data.length} words)\`);
+	  const { ripgen } = await import('${
+              new URL("./wasm/ripgendeno.js", import.meta.url).href
+            }');
+	  try {
+		  const domain = "${domain}"
+		  const result = ripgen(domain, e.data);
+		  console.debug(\`📝 RIPGEN: Worker ${i}: \${result.length} results\`);
+		  self.postMessage(result);
+		  console.debug(\`📝 RIPGEN: Worker ${i}: Done\`);
+		  self.postMessage("finished");
+		  self.close("finished");
+	  } catch (e) {
+		  console.error(e);
+		  self.close();
+	  }}`],
+            { type: "application/javascript" },
+          ),
+        );
+        const worker = new Worker(WorkerBlob, { type: "module" });
         this.workers.add(worker);
         worker.onmessage = (e) => {
           if (e.data !== "finished") {
             this.amount += e.data.length;
             this.resultdata.push(e.data);
             if (this.amount >= 2500) {
-
               this.dispatchEvent(
                 new CustomEvent("data", {
                   bubbles: true,
@@ -122,6 +125,7 @@ self.onmessage = async (e) => {
             }
           } else {
             worker.terminate();
+            URL.revokeObjectURL(WorkerBlob);
             this.workers.delete(worker);
             if (this.workers.size === 0) {
               this.dispatchEvent(
@@ -166,6 +170,7 @@ self.onmessage = async (e) => {
       Promise.all([
         this.workers.forEach((w) => {
           w.terminate();
+          URL.revokeObjectURL(w.blobURL);
           this.workers.delete(w);
         }),
       ]);
