@@ -7,7 +7,7 @@
 > WIP (Still writing this at the moment the API is not stablized yet)
 
 ```js
-import "https://deno.land/x/ripgen@0.0.6/web.js";
+import "https://deno.land/x/ripgen@0.0.7/web.js";
 
 
 //First you need to call off the wordlist method, it is a static method and it will return a new class object
